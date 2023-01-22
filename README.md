@@ -15,7 +15,7 @@ example: `sudo apt install curl jq`
 2. Change permissions to make it executable: `sudo chmod 700 /home/username/scripts/dns-update.sh`  
 3. Open the script file and configure the Settings at the top of the file.  
 4. You will need to know your email address, zone id from CloudFlare, api token from CloudFlare, and domain names.  
-5. Either place the script directly into one of the cron dirs, symlink it there, or put a line to execute it directlty into crontab.  
+5. Either place the script directly into one of the cron dirs, symlink it there, or put a line to execute it directly into crontab.  
 * If you place the script directly into cron.hourly make sure to leave off the extension `.sh`  
 * Symlink to cron.hourly: `ln -s /home/username/scripts/dns-update.sh /etc/cron.hourly/dns-update`  
 * Add to crontab: `crontab -e` and add line `0 * * * * /home/username/scripts/dns-update.sh` to have it run hourly on the hour.  
