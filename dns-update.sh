@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set to run hourly in cron.
-#	ln -s /root/scripts/dns-update.sh /etc/cron.hourly/dns-update
+#	ln -s /home/username/scripts/dns-update.sh /etc/cron.hourly/dns-update
 # Deleting the cache file will cause script to update CloudFlare even if public ip has not changed.
 
 
