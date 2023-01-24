@@ -6,7 +6,8 @@
 
 
 ## SETTINGS
-email=root												      # Address for errors and confirmations
+email=root												      # Address for errors and confirmations (leave empty to disable mail)
+logfile='/var/log/dns-update.log'				# Where to save log file. You may want to set up logrotate (leave empty to disable logging)
 cachedir='/var/cache/dns-update'				# Directory where script saves DNS address
 zone_id='your-zone-id'									# From CloudFlare Overview page
 api_token='your-api-token'							# Click "Get your API token" from Overview page (Token Name: Edit zone DNS)
@@ -35,6 +36,25 @@ preflight_check() {
 
 
 
+## NOTIFICATIONS
+message() {
+	body="$1"
+	subject="$2"
+	# Check mail settings
+	if [[ -n "$email" ]]; then
+		# shellcheck disable=SC2102
+		echo "$(date +[%d/%b/%Y_%H:%M]) ${body}" | mail -s "dns-update.sh - ${subject}" "$email"
+	fi
+	# Check log settings
+	if [[ -n "$logfile" ]]; then
+		# shellcheck disable=SC2102
+		echo "$(date +[%d/%b/%Y_%H:%M]) ${body}" >> "$logfile"
+	fi
+}
+
+
+
+
 ## GET PUBLIC IP
 get_public_ip() {
 	# Try with cloudflare nameserver
@@ -47,8 +67,8 @@ get_public_ip() {
 	elif public_ip=$(dig -4 +short TXT o-o.myaddr.l.google.com @ns1.google.com 2>/dev/null | grep -Pos '\b(?:\d{1,3}\.){3}\d{1,3}(?:/\d{1,2})?\b'); then
 		return
 	else
-		# shellcheck disable=SC2102
-		echo "$(date +[%d/%b/%Y_%H:%M]) Unable to get public ip address with cloudflare, opendns, or google resolvers." | mail -s "dns-update.sh - error get_public_ip" "$email"
+		message "ERROR - Unable to get public ip address with cloudflare, opendns, or google resolvers." "error get_public_ip"
+		
 	fi
 }
 
@@ -83,8 +103,7 @@ get_dns_record() {
 		#address=$(jq -j '.result[].content' "$curl_tmp")
 		rm "$curl_tmp" "$stderr_tmp"
 	else
-		# shellcheck disable=SC2102
-		echo "$(date +[%d/%b/%Y_%H:%M]) ${1}: ${curl_err}  HTTP Code: ${http_rc}  Host Msg: ${host_msg}" | mail -s "dns-update.sh - error get_dns_record" "$email"
+		message "ERROR - ${1}: ${curl_err}  HTTP Code: ${http_rc}  Host Msg: ${host_msg}" "error get_dns_record"
 		rm "$curl_tmp" "$stderr_tmp"
 		exit 1
 	fi
@@ -120,8 +139,7 @@ update_dns_record() {
 		patched_addr=$(jq -j '.result.content' "$curl_tmp")
 		rm "$curl_tmp" "$stderr_tmp"
 	else
-		# shellcheck disable=SC2102
-		echo "$(date +[%d/%b/%Y_%H:%M]) ${1}: ${curl_err}  HTTP Code: ${http_rc}  Host Msg: ${host_msg}" | mail -s "dns-update.sh - error update_dns_record" "$email"
+		message "ERROR - ${1}: ${curl_err}  HTTP Code: ${http_rc}  Host Msg: ${host_msg}" "error update_dns_record"
 		rm "$curl_tmp" "$stderr_tmp"
 		exit 1
 	fi
@@ -160,16 +178,14 @@ for i in "${domains[@]}"; do
 			get_dns_record "$i"
 			update_dns_record "$i"
 			update_cache "$i"
-			# shellcheck disable=SC2102
-			echo "$(date +[%d/%b/%Y_%H:%M]) DNS Record for $i updated from $cache_addr to $patched_addr" | mail -s "dns-update.sh - DNS UPDATED" "$email"
+			message "INFO - DNS Record for $i updated from $cache_addr to $patched_addr" "DNS UPDATED"
 
  		# If cache_timestamp is 1 month old then force update
 		elif (( cache_timestamp < $(date -d 'now - 1 months' +%s) )); then
 			get_dns_record "$i"
 			update_dns_record "$i"
 			update_cache "$i"
-			# shellcheck disable=SC2102
-			echo "$(date +[%d/%b/%Y_%H:%M]) DNS Monthly Force Update for $i from $cache_addr to $patched_addr" | mail -s "dns-update.sh - DNS UPDATED" "$email"
+			message "INFO - DNS Monthly Force Update for $i from $cache_addr to $patched_addr" "DNS UPDATED"
 		fi
 
 	else
@@ -180,7 +196,6 @@ for i in "${domains[@]}"; do
 		get_dns_record "$i"
 		update_dns_record "$i"
 		update_cache "$i"
-		# shellcheck disable=SC2102
-		echo "$(date +[%d/%b/%Y_%H:%M]) DNS Record for $i updated for first time to $patched_addr" | mail -s "dns-update.sh - DNS UPDATED" "$email"
+		message "INFO - DNS Record for $i updated for first time to $patched_addr" "DNS UPDATED"
 	fi
 done
