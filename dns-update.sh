@@ -68,7 +68,6 @@ get_public_ip() {
 		return
 	else
 		message "ERROR - Unable to get public ip address with cloudflare, opendns, or google resolvers." "error get_public_ip"
-		
 	fi
 }
 
